@@ -1,8 +1,18 @@
 *.hdf5
-*.png
 *.pdf
 *.nfs*
+<<<<<<< HEAD
+=======
+*.index
+>>>>>>> 1da51981b9f1899e7456e84a2c80801fe0c3ba53
 zeldo/notebooks/logs/*
 zeldo/notebooks/Results/*
 zeldo/tests/logs/*
 zeldo/tests/Results/*
+<<<<<<< HEAD
+=======
+zeldo/notebooks/.ipynb_checkpoints/*
+zeldo/notebooks/training_checkpoints/*
+zeldo/notebooks/training_checkpoints/ckpt*
+zeldo/notebooks/training_checkpoints/*.data-00001-of-00002
+>>>>>>> 1da51981b9f1899e7456e84a2c80801fe0c3ba53
