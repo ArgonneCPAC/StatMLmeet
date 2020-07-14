@@ -40,14 +40,14 @@ mode = 'train'
 # In[ ]:
 
 
-num_epochs = 100 #100 #5000
-batch_size = 64
+num_epochs = 1000
+batch_size = 256 #256
 learning_rate = 1e-4 #1e-4
-decay_rate = 1e-2
+decay_rate = 0.01
 
-latent_dim = 512 #2*2*2
+latent_dim = 512  
 epsilon_mean = 0.1
-epsilon_std = 1e-4
+epsilon_std = 1e-4 #1e-4
 
 
 # In[ ]:
@@ -102,115 +102,116 @@ swe_valid_data.max()
 # In[ ]:
 
 
-def model_def():
+# def model_def():
     
-    def coeff_determination(y_pred, y_true): #Order of function inputs is important here        
-        SS_res =  K.sum(K.square( y_true-y_pred )) 
-        SS_tot = K.sum(K.square( y_true - K.mean(y_true) ) )
-        return ( 1 - SS_res/(SS_tot + K.epsilon()) )
+#     def coeff_determination(y_pred, y_true): #Order of function inputs is important here        
+#         SS_res =  K.sum(K.square( y_true-y_pred )) 
+#         SS_tot = K.sum(K.square( y_true - K.mean(y_true) ) )
+#         return ( 1 - SS_res/(SS_tot + K.epsilon()) )
 
-    # reparameterization trick
-    # instead of sampling from Q(z|X), sample eps = N(0,I)
-    # then z = z_mean + sqrt(var)*eps
-    def sampling(args):
-        """Reparameterization trick by sampling fr an isotropic unit Gaussian.
-         Arguments
-            args (tensor): mean and log of variance of Q(z|X)
-         Returns
-            z (tensor): sampled latent vector
-        """
+#     # reparameterization trick
+#     # instead of sampling from Q(z|X), sample eps = N(0,I)
+#     # then z = z_mean + sqrt(var)*eps
+#     def sampling(args):
+#         """Reparameterization trick by sampling fr an isotropic unit Gaussian.
+#          Arguments
+#             args (tensor): mean and log of variance of Q(z|X)
+#          Returns
+#             z (tensor): sampled latent vector
+#         """
 
 
-        z_mean, z_log_var = args
-        batch = K.shape(z_mean)[0]
-        dim = K.int_shape(z_mean)[1]
-        # by default, random_normal has mean=0 and std=1.0
-        epsilon = K.random_normal(shape=(batch, dim), mean=epsilon_mean, stddev=epsilon_std)
-        return z_mean + K.exp(0.5 * z_log_var) * epsilon
+#         z_mean, z_log_var = args
+#         batch = K.shape(z_mean)[0]
+#         dim = K.int_shape(z_mean)[1]
+#         # by default, random_normal has mean=0 and std=1.0
+#         epsilon = K.random_normal(shape=(batch, dim), mean=epsilon_mean, stddev=epsilon_std)
+#         return z_mean + K.exp(0.5 * z_log_var) * epsilon
 
-    ## Encoder
-    encoder_inputs = Input(shape=(64,64,1),name='Field')
-    # Encode   
-#     x = Conv2D(256,kernel_size=(5,5),activation='relu',padding='same')(encoder_inputs)
-    x = Conv2D(256,kernel_size=(3,3),activation='relu',padding='same')(encoder_inputs)
-    x = Conv2D(128,kernel_size=(2,2),activation='relu',padding='same')(encoder_inputs)
-    x = Conv2D(128,kernel_size=(1,1),activation='relu',padding='same')(encoder_inputs)
+#     ## Encoder
+#     encoder_inputs = Input(shape=(64,64,1),name='Field')
+#     # Encode   
+#     x = Conv2D(512,kernel_size=(5,5),activation='relu',padding='same')(encoder_inputs)
+#     x = Conv2D(256,kernel_size=(3,3),activation='relu',padding='same')(encoder_inputs)
+#     x = Conv2D(256,kernel_size=(2,2),activation='relu',padding='same')(encoder_inputs)
+#     # x = Conv2D(128,kernel_size=(1,1),activation='relu',padding='same')(encoder_inputs)
 
-    x = MaxPooling2D(pool_size=(2, 2),padding='same')(x)
-
-    x = Conv2D(128,kernel_size=(3,3),activation='relu',padding='same')(x)
-    x = MaxPooling2D(pool_size=(2, 2),padding='same')(x)
-
-#     x = Conv2D(64,kernel_size=(3,3),activation='relu',padding='same')(x)
 #     x = MaxPooling2D(pool_size=(2, 2),padding='same')(x)
 
-#     x = Conv2D(15,kernel_size=(3,3),activation='relu',padding='same')(enc_l4)
-#     enc_l5 = MaxPooling2D(pool_size=(2, 2),padding='same')(x)
+#     x = Conv2D(128,kernel_size=(2,2),activation='relu',padding='same')(x)
+#     x = MaxPooling2D(pool_size=(2, 2),padding='same')(x)
 
-#     x = Conv2D(10,kernel_size=(3,3),activation=None,padding='same')(enc_l5)
-#     encoded = MaxPooling2D(pool_size=(2, 2),padding='same')(x)
+# #     x = Conv2D(64,kernel_size=(3,3),activation='relu',padding='same')(x)
+# #     x = MaxPooling2D(pool_size=(2, 2),padding='same')(x)
 
-    x = Flatten()(x)
-    z_mean = Dense(latent_dim, name='z_mean')(x)
-    z_log_var = Dense(latent_dim, name='z_log_var')(x)
+# #     x = Conv2D(15,kernel_size=(3,3),activation='relu',padding='same')(enc_l4)
+# #     enc_l5 = MaxPooling2D(pool_size=(2, 2),padding='same')(x)
 
-    # use reparameterization trick to push the sampling out as input
-    # note that "output_shape" isn't necessary with the TensorFlow backend
-    z = Lambda(sampling, output_shape=(latent_dim,), name='z')([z_mean, z_log_var])
-    # instantiate encoder model
-    encoder = Model(encoder_inputs, [z_mean, z_log_var, z], name='encoder')
-    encoder.summary()
+# #     x = Conv2D(10,kernel_size=(3,3),activation=None,padding='same')(enc_l5)
+# #     encoded = MaxPooling2D(pool_size=(2, 2),padding='same')(x)
 
-    # build decoder model
-    latent_inputs = Input(shape=(latent_dim,), name='z_sampling')
-    x = Dense(512)(latent_inputs)
-    x = Reshape((16, 16, 2))(x)
+#     x = Flatten()(x)
+#     z_mean = Dense(latent_dim, name='z_mean')(x)
+#     z_log_var = Dense(latent_dim, name='z_log_var')(x)
+
+#     # use reparameterization trick to push the sampling out as input
+#     # note that "output_shape" isn't necessary with the TensorFlow backend
+#     z = Lambda(sampling, output_shape=(latent_dim,), name='z')([z_mean, z_log_var])
+#     # instantiate encoder model
+#     encoder = Model(encoder_inputs, [z_mean, z_log_var, z], name='encoder')
+#     encoder.summary()
+
+#     # build decoder model
+#     latent_inputs = Input(shape=(latent_dim,), name='z_sampling')
+#     x = Dense(512)(latent_inputs)
+#     x = Reshape((16, 16, 2))(x)
        
-#     x = Conv2D(2,kernel_size=(3,3),activation=None,padding='same')(x)
-#     dec_l1 = UpSampling2D(size=(2, 2))(x)
+# #     x = Conv2D(2,kernel_size=(3,3),activation=None,padding='same')(x)
+# #     dec_l1 = UpSampling2D(size=(2, 2))(x)
 
-#     x = Conv2D(15,kernel_size=(3,3),activation='relu',padding='same')(dec_l1)
-#     dec_l2 = UpSampling2D(size=(2, 2))(x)
+# #     x = Conv2D(15,kernel_size=(3,3),activation='relu',padding='same')(dec_l1)
+# #     dec_l2 = UpSampling2D(size=(2, 2))(x)
 
-#     x = Conv2D(64,kernel_size=(3,3),activation='relu',padding='same')(x)
+# #     x = Conv2D(64,kernel_size=(3,3),activation='relu',padding='same')(x)
+# #     x = UpSampling2D(size=(2, 2))(x)
+
+#     x = Conv2D(128,kernel_size=(3,3),activation='relu',padding='same')(x)
 #     x = UpSampling2D(size=(2, 2))(x)
 
-    x = Conv2D(128,kernel_size=(3,3),activation='relu',padding='same')(x)
-    x = UpSampling2D(size=(2, 2))(x)
+# #     x = Conv2D(256,kernel_size=(5,5),activation='relu',padding='same')(x)
+#     # x = Conv2D(256,kernel_size=(1,1),activation='relu',padding='same')(x)
+#     x = Conv2D(256,kernel_size=(2,2),activation='relu',padding='same')(x)
+#     x = Conv2D(256,kernel_size=(3,3),activation='relu',padding='same')(x)
+#     x = Conv2D(512,kernel_size=(5,5),activation='relu',padding='same')(x)
+#     x = UpSampling2D(size=(2, 2))(x)
 
-#     x = Conv2D(256,kernel_size=(5,5),activation='relu',padding='same')(x)
-    x = Conv2D(256,kernel_size=(1,1),activation='relu',padding='same')(x)
-    x = Conv2D(256,kernel_size=(2,2),activation='relu',padding='same')(x)
-    x = Conv2D(256,kernel_size=(3,3),activation='relu',padding='same')(x)
-    x = UpSampling2D(size=(2, 2))(x)
+#     decoded = Conv2D(1,kernel_size=(2,2),activation=None,padding='same')(x)
+#     decoder = Model(inputs=latent_inputs,outputs=decoded)
+#     decoder.summary()
+#     # instantiate VAE model
+#     ae_outputs = decoder(encoder(encoder_inputs))
+#     model = Model(inputs=encoder_inputs,outputs=ae_outputs,name='VAE')
 
-    decoded = Conv2D(1,kernel_size=(3,3),activation=None,padding='same')(x)
-    decoder = Model(inputs=latent_inputs,outputs=decoded)
-    decoder.summary()
-    # instantiate VAE model
-    ae_outputs = decoder(encoder(encoder_inputs))
-    model = Model(inputs=encoder_inputs,outputs=ae_outputs,name='VAE')
-
-    # Losses and optimization
-    my_adam = optimizers.Adam(lr=learning_rate, beta_1=0.9, beta_2=0.999, epsilon=None, decay=decay_rate, amsgrad=False)
+#     # Losses and optimization
+#     my_adam = optimizers.Adam(lr=learning_rate, beta_1=0.9, beta_2=0.999, epsilon=None, decay=decay_rate, amsgrad=False)
     
     
     
-    # Compute VAE loss
-    def my_vae_loss(y_true, y_pred):
-        reconstruction_loss = mse(K.flatten(y_true), K.flatten(y_pred))
+#     # Compute VAE loss
+#     def my_vae_loss(y_true, y_pred):
+#         reconstruction_loss = mse(K.flatten(y_true), K.flatten(y_pred))
 
-        kl_loss = 1 + z_log_var - K.square(z_mean) - K.exp(z_log_var)
-        kl_loss = K.sum(kl_loss, axis=-1)
-        kl_loss *= -0.5
-        vae_loss = K.mean(reconstruction_loss + kl_loss)
-        return vae_loss
+#         kl_loss = 1 + z_log_var - K.square(z_mean) - K.exp(z_log_var)
+#         kl_loss = K.sum(kl_loss, axis=-1)
+#         kl_loss *= -0.5
+#         vae_loss = K.mean(reconstruction_loss + kl_loss)
+#         return vae_loss
 
-    model.compile(optimizer=my_adam, loss = my_vae_loss, metrics=[coeff_determination])
+#     model.compile(optimizer=my_adam, loss = my_vae_loss, metrics=[coeff_determination])
 
-    model.summary()
+#     model.summary()
 
-    return model, decoder, encoder
+#     return model, decoder, encoder
 
 
 # In[ ]:
@@ -243,9 +244,10 @@ def model_def():
     ## Encoder
     encoder_inputs = Input(shape=(64,64,1),name='Field')
     # Encode   
-    x = Conv2D(256,kernel_size=(3,3),activation='relu',padding='same')(encoder_inputs)
-    x = Conv2D(128,kernel_size=(2,2),activation='relu',padding='same')(encoder_inputs)
-    x = Conv2D(128,kernel_size=(1,1),activation='relu',padding='same')(encoder_inputs)
+    # x = Conv2D(256,kernel_size=(5,5),activation='relu',padding='same')(encoder_inputs)
+    x = Conv2D(512,kernel_size=(3,3),activation='relu',padding='same')(encoder_inputs)
+    x = Conv2D(512,kernel_size=(2,2),activation='relu',padding='same')(x)
+    x = Conv2D(512,kernel_size=(1,1),activation='relu',padding='same')(x)
 
     x = MaxPooling2D(pool_size=(2, 2),padding='same')(x)
 
@@ -268,17 +270,20 @@ def model_def():
     # build decoder model
     latent_inputs = Input(shape=(latent_dim,), name='z_sampling')
     x = Dense(512)(latent_inputs)
-    x = Reshape((16, 16, 2))(x)
+    x = Reshape((16, 16, 2))(x)  ## removed for latent space 
+    # x = Dense(2048)(latent_inputs)
+    # x = Reshape((32, 32, 2))(x)
        
 
 
     x = Conv2D(128,kernel_size=(3,3),activation='relu',padding='same')(x)
-    x = UpSampling2D(size=(2, 2))(x)
+    x = UpSampling2D(size=(2, 2))(x) ## removed for latent space 
 
 #     x = Conv2D(256,kernel_size=(5,5),activation='relu',padding='same')(x)
-    x = Conv2D(256,kernel_size=(1,1),activation='relu',padding='same')(x)
-    x = Conv2D(256,kernel_size=(2,2),activation='relu',padding='same')(x)
-    x = Conv2D(256,kernel_size=(3,3),activation='relu',padding='same')(x)
+    x = Conv2D(512,kernel_size=(1,1),activation='relu',padding='same')(x)
+    x = Conv2D(512,kernel_size=(2,2),activation='relu',padding='same')(x)
+    x = Conv2D(512,kernel_size=(3,3),activation='relu',padding='same')(x)
+    # x = Conv2D(256,kernel_size=(5,5),activation='relu',padding='same')(x)
     x = UpSampling2D(size=(2, 2))(x)
 
     decoded = Conv2D(1,kernel_size=(3,3),activation=None,padding='same')(x)
@@ -337,7 +342,7 @@ if mode == 'train':
     callbacks_list = [checkpoint,earlystopping]
 #     train_history = model.fit(x=swe_train_data, y=swe_train_data, epochs=num_epochs, batch_size=batch_size, callbacks=callbacks_list, validation_split=0.1)
 
-    train_history = model.fit(swe_train_data, epochs=num_epochs, batch_size=batch_size, callbacks=callbacks_list, validation_split=0.1)
+    train_history = model.fit(swe_train_data, epochs=num_epochs, batch_size=batch_size, validation_split=0.1)
     model.save_weights('vae_cnn')
     print('Training complete')
         # model.load_weights(weights_filepath)
@@ -356,6 +361,7 @@ if mode == 'train':
      fig1 = plt.figure()
      plt.plot(train_history.history['loss'],'r')
      plt.plot(train_history.history['val_loss'])
+plt.savefig('Plots/VAE_hist.png')
 
 
 # In[ ]:
@@ -383,6 +389,7 @@ a[0].imshow(generator[indx,:,:,0])
 a[1].imshow(swe_valid[indx,:,:,0])
 
 a[2].imshow(generator[indx,:,:,0] - swe_valid[indx,:,:,0])
+plt.savefig('Plots/VAE_gen.png')
 
 
 # In[ ]:
@@ -394,17 +401,16 @@ generator_train = model.predict(swe_train[0:10])
 # In[ ]:
 
 
-indx = 3
-plt.imshow(generator_train[indx,:,:,0])
+for indx in range(8):
 
+    f, a = plt.subplots(1, 2, figsize = (11,5))
+    plt.subplots_adjust(left=None, bottom=None, right=None, top=None, hspace=None)
 
-# In[ ]:
+    a[0].imshow(generator[indx,:,:,0])
+    a[1].imshow(swe_valid[indx,:,:,0])
 
-
-
-
-
-# In[ ]:
+    plt.savefig('Plots/VAE_gen'+str(indx)+'.png')
+    plt.clf()
 
 
 
