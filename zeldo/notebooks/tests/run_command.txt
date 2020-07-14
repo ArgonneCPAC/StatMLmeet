@@ -1,1 +1,1 @@
-KERAS_BACKEND=tensorflow /home/nramachandra/anaconda3/envs/tf_gpu/bin/python VAE_wideBottleneck_new.py  2>&1 | tee log_file.txt
+KERAS_BACKEND=tensorflow python VAE_wideBottleneck_new.py  2>&1 | tee log_file.txt
