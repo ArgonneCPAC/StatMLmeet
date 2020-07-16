@@ -98,13 +98,13 @@ def model_def():
     encoder_inputs = Input(shape=(64,64,1),name='Field')
     # Encode   
     # x = Conv2D(256,kernel_size=(5,5),activation='relu',padding='same')(encoder_inputs)
-    x = Conv2D(512,kernel_size=(3,3),activation='relu',padding='same')(encoder_inputs)
-    x = Conv2D(512,kernel_size=(2,2),activation='relu',padding='same')(x)
-    x = Conv2D(512,kernel_size=(1,1),activation='relu',padding='same')(x)
+    x = Conv2D(128,kernel_size=(3,3),activation='relu',padding='same')(encoder_inputs)
+    x = Conv2D(128,kernel_size=(2,2),activation='relu',padding='same')(x)
+    x = Conv2D(128,kernel_size=(1,1),activation='relu',padding='same')(x)
 
     x = MaxPooling2D(pool_size=(2, 2),padding='same')(x)
 
-    x = Conv2D(128,kernel_size=(3,3),activation='relu',padding='same')(x)
+    x = Conv2D(64,kernel_size=(3,3),activation='relu',padding='same')(x)
     x = MaxPooling2D(pool_size=(2, 2),padding='same')(x)
 
 
@@ -129,13 +129,13 @@ def model_def():
        
 
 
-    x = Conv2D(128,kernel_size=(3,3),activation='relu',padding='same')(x)
+    x = Conv2D(64,kernel_size=(3,3),activation='relu',padding='same')(x)
     x = UpSampling2D(size=(2, 2))(x) ## removed for latent space 
 
 #     x = Conv2D(256,kernel_size=(5,5),activation='relu',padding='same')(x)
-    x = Conv2D(512,kernel_size=(1,1),activation='relu',padding='same')(x)
-    x = Conv2D(512,kernel_size=(2,2),activation='relu',padding='same')(x)
-    x = Conv2D(512,kernel_size=(3,3),activation='relu',padding='same')(x)
+    x = Conv2D(128,kernel_size=(1,1),activation='relu',padding='same')(x)
+    x = Conv2D(128,kernel_size=(2,2),activation='relu',padding='same')(x)
+    x = Conv2D(128,kernel_size=(3,3),activation='relu',padding='same')(x)
     # x = Conv2D(256,kernel_size=(5,5),activation='relu',padding='same')(x)
     x = UpSampling2D(size=(2, 2))(x)
 
@@ -221,6 +221,5 @@ for indx in range(8):
 
 time2 = time.time()
 
-print( str(time2-time1)+'seconds')
+print( str(time2-time1)+' seconds')
 print('Code completion' )
-
