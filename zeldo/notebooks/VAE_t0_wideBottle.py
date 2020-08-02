@@ -49,12 +49,12 @@ batch_size = 128 #256
 num_epochs = 1000
 batch_size = 64 #256
 #>>>>>>> fa628e65045162d01d4416ab231b3bac146a960e
-learning_rate = 5e-5 #1e-4
-decay_rate = 0.0 #0.1 #0.01
+learning_rate = 1e-5 #5e-5 #1e-4
+decay_rate = 0.1 #0.1 #0.01
 
-latent_dim = 512  
-epsilon_mean = 0.1
-epsilon_std = 1e-4 #1e-4
+latent_dim = 128
+epsilon_mean = 0.1 #0.1
+epsilon_std = 1e-2 #1e-4 #1e-4
 
 input_dim = 128
 # In[ ]:
@@ -260,6 +260,17 @@ def model_def():
     x = Conv2D(128,kernel_size=(3,3),activation='relu',padding='same')(x)
     x = Conv2D(128,kernel_size=(3,3),activation='relu',padding='same')(x)
 
+    x = Conv2D(128,kernel_size=(3,3),activation='relu',padding='same')(x)
+    x = Conv2D(128,kernel_size=(3,3),activation='relu',padding='same')(x)
+    x = Conv2D(128,kernel_size=(3,3),activation='relu',padding='same')(x)
+
+
+    x = Conv2D(128,kernel_size=(3,3),activation='relu',padding='same')(x)
+    x = Conv2D(128,kernel_size=(3,3),activation='relu',padding='same')(x)
+    x = Conv2D(128,kernel_size=(3,3),activation='relu',padding='same')(x)
+
+
+
     x = MaxPooling2D(pool_size=(2, 2),padding='same')(x)
 
     x = Conv2D(64,kernel_size=(3,3),activation='relu',padding='same')(x)
@@ -295,6 +306,20 @@ def model_def():
     x = Conv2D(128,kernel_size=(3,3),activation='relu',padding='same')(x)
     x = Conv2D(128,kernel_size=(3,3),activation='relu',padding='same')(x)
     x = Conv2D(128,kernel_size=(3,3),activation='relu',padding='same')(x)
+
+
+    x = Conv2D(128,kernel_size=(3,3),activation='relu',padding='same')(x)
+    x = Conv2D(128,kernel_size=(3,3),activation='relu',padding='same')(x)
+    x = Conv2D(128,kernel_size=(3,3),activation='relu',padding='same')(x)
+
+
+    x = Conv2D(128,kernel_size=(3,3),activation='relu',padding='same')(x)
+    x = Conv2D(128,kernel_size=(3,3),activation='relu',padding='same')(x)
+    x = Conv2D(128,kernel_size=(3,3),activation='relu',padding='same')(x)
+
+
+
+
     x = UpSampling2D(size=(2, 2))(x)
 
     x = Conv2D(128,kernel_size=(3,3),activation='relu',padding='same')(x)
@@ -350,7 +375,7 @@ model,decoder,encoder = model_def()
 # In[ ]:
 
 
-weights_filepath = 'best_weights_vae.h5'
+weights_filepath = 't0_best_weights_vae.h5'
 if mode == 'train':
     checkpoint = ModelCheckpoint(weights_filepath, monitor='val_loss', verbose=1, save_best_only=True, mode='min',save_weights_only=True)
     earlystopping = EarlyStopping(monitor='val_loss', min_delta=0, patience=20, verbose=0, mode='auto', baseline=None, restore_best_weights=False)
@@ -358,25 +383,27 @@ if mode == 'train':
 #     train_history = model.fit(x=swe_train_data, y=swe_train_data, epochs=num_epochs, batch_size=batch_size, callbacks=callbacks_list, validation_split=0.1)
 
     train_history = model.fit(swe_train_data, epochs=num_epochs, batch_size=batch_size, validation_split=0.1)
-    model.save_weights('vae_cnn')
+    model.save_weights('t0_vae_cnn_1')
     print('Training complete')
         # model.load_weights(weights_filepath)
 
 
 # In[ ]:
 
+model.load_weights('t0_vae_cnn_1')
 
 # train_history = model.fit(x=swe_train_data, y=swe_train_data, epochs=num_epochs, batch_size=batch_size, validation_split=0.1)
+
 
 
 # In[ ]:
 
 
 if mode == 'train':
-     fig1 = plt.figure()
-     plt.plot(train_history.history['loss'],'r')
-     plt.plot(train_history.history['val_loss'])
-plt.savefig('VAE_hist.png')
+    fig1 = plt.figure()
+    plt.plot(train_history.history['loss'],'r')
+    plt.plot(train_history.history['val_loss'])
+    plt.savefig('VAE_hist_1.png')
 
 
 # In[ ]:
@@ -404,7 +431,7 @@ a[0].imshow(generator[indx,:,:,0])
 a[1].imshow(swe_valid[indx,:,:,0])
 
 a[2].imshow(generator[indx,:,:,0] - swe_valid[indx,:,:,0])
-plt.savefig('VAE_gen.png')
+plt.savefig('VAE_gen_1.png')
 
 
 # In[ ]:
@@ -424,10 +451,35 @@ for indx in range(8):
     a[0].imshow(generator[indx,:,:,0])
     a[1].imshow(swe_valid[indx,:,:,0])
 
-    plt.savefig('VAE_gen'+str(indx)+'.png')
+    plt.savefig('VAE_gen_1'+str(indx)+'.png')
     plt.clf()
 
 
+encoded_train = encoder.predict(swe_train[0:100])[0]
+
+encoded_test = encoder.predict(swe_valid[0:100])[0]
+
+print(swe_train.shape)
+print(np.shape(encoded_train))
+
+
+import umap
+np.random.seed(5)
+reducer = umap.UMAP()
+embedding_train = reducer.fit_transform(encoded_train)
+# f, a = plt.subplots(2, 2, figsize = (7, 6))
+embedding_test = reducer.fit_transform(encoded_test)
+
+
+f, a = plt.subplots(1, 1, figsize = (9, 6))
+plt.subplots_adjust(left=None, bottom=None, right=None, top=None, hspace=None)
+# for para_idx in range(5):
+sc = a.scatter(embedding_train[:, 0], embedding_train[:, 1], c= 'r', s = 20, alpha = 0.5)
+sc = a.scatter(embedding_test[:, 0], embedding_test[:, 1], c= 'b', s = 20, alpha = 0.5)
+
+plt.colorbar(sc)
+
+plt.savefig('t0_scatter_encoded_umap_1.png')
 #<<<<<<< HEAD
 time2 = time.time()
 
